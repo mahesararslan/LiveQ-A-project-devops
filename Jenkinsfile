@@ -58,11 +58,21 @@ EOF
                     echo "🚀 Setting up and starting Live Q&A application..."
                 }
                 
-                // Stop any existing containers and clean up
+                // Clean up existing containers and images
                 sh '''
-                    echo "Cleaning up existing containers..."
+                    echo "Cleaning up existing containers and freeing disk space..."
                     docker-compose down --remove-orphans || true
-                    docker system prune -f || true
+                    
+                    # Remove old images from this project
+                    docker images | grep devops-assignment | awk '{print $3}' | xargs -r docker rmi -f || true
+                    
+                    # Prune unused Docker resources
+                    docker system prune -f
+                    docker builder prune -f
+                    
+                    # Show available disk space
+                    echo "Available disk space:"
+                    df -h /
                 '''
                 
                 // Build and start the application
