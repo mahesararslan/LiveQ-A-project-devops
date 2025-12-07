@@ -1,0 +1,29 @@
+# Test execution cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest
+.pytest_cache/
+test_report.html
+assets/
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# WebDriver
+*.log
+geckodriver.log
+chromedriver.log
+
+# Screenshots
+screenshots/
+*.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
