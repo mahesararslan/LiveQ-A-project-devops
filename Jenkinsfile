@@ -248,11 +248,11 @@ EOF
                         returnStdout: true
                     ).trim()
                 } catch (Exception e) {
-                    committer = 'mahesararslan1998@gmail.com'  // Fallback email
+                    committer = 'qasimalik@gmail.com'  // Fallback email
                 }
                 
                 if (!committer || committer == '') {
-                    committer = 'mahesararslan1998@gmail.com'
+                    committer = 'qasimalik@gmail.com'
                 }
 
                 // Parse test results
