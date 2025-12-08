@@ -7,19 +7,19 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "0.0.0.0:5432:5432"
 
   # Redis for Pub/Sub
   redis:
     image: redis:7
     ports:
-      - "6379:6379"
+      - "0.0.0.0:6379:6379"
 
   # Backend
   backend:
     build: ./backend
     ports:
-      - "3000:3000"
+      - "0.0.0.0:3000:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/liveqa
       - REDIS_HOST=redis
@@ -39,7 +39,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3001:3001"
+      - "0.0.0.0:3001:3001"
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:3000
     depends_on:
