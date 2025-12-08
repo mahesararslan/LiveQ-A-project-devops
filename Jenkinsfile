@@ -209,7 +209,7 @@ EOF
                 '''
                 
                 // Publish JUnit results
-                publishTestResults testResultsPattern: 'tests/pytest_results.xml', allowEmptyResults: true
+                junit testResults: 'tests/pytest_results.xml', allowEmptyResults: true
             }
         }
 
