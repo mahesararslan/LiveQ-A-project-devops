@@ -416,21 +416,24 @@ EOF
                     echo "⚠️ Failed to send email notification: ${e.message}"
                 }
             }
-
-            // Clean up Docker containers
-            sh '''
-                echo "🧹 Cleaning up Docker containers..."
-                docker-compose down --remove-orphans || true
-                docker system prune -f || true
-            '''
         }
 
         success {
-            echo "🎉 Pipeline completed successfully!"
+            echo "🎉 Pipeline completed successfully! Application is running at:"
+            echo "   Frontend: http://localhost:3001"
+            echo "   Backend:  http://localhost:3000"
+            echo "   Containers will remain running for access."
         }
 
         failure {
             echo "💥 Pipeline failed! Check the logs for details."
+            
+            // Only cleanup on failure
+            sh '''
+                echo "🧹 Cleaning up failed containers..."
+                docker-compose down --remove-orphans || true
+                docker system prune -f || true
+            '''
         }
 
         unstable {
