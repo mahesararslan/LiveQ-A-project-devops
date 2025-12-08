@@ -123,19 +123,17 @@ EOF
                     echo "Creating Python virtual environment..."
                     python3 -m venv venv
                     
-                    echo "Activating virtual environment..."
                     source venv/bin/activate
                     
                     echo "Upgrading pip..."
                     pip install --upgrade pip
                     
-                    echo "Installing Python test dependencies..."
+                    echo "Installing test dependencies..."
                     pip install -r requirements.txt
                     
                     echo "Running HTTP tests..."
-                    python3 -m pytest test_http_simple.py -v --html=http_test_report.html --self-contained-html --tb=short
+                    pytest test_http_simple.py -v --html=http_test_report.html --self-contained-html --tb=short || exit 1
                     
-                    echo "Deactivating virtual environment..."
                     deactivate
                 '''
             }
