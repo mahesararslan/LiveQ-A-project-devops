@@ -123,7 +123,7 @@ EOF
                     echo "Creating Python virtual environment..."
                     python3 -m venv venv
                     
-                    source venv/bin/activate
+                    . venv/bin/activate
                     
                     echo "Upgrading pip..."
                     pip install --upgrade pip
@@ -153,7 +153,7 @@ EOF
                     python3 -m venv venv_selenium
                     
                     echo "Activating virtual environment..."
-                    source venv_selenium/bin/activate
+                    . venv_selenium/bin/activate
                     
                     echo "Installing dependencies..."
                     pip install --upgrade pip
@@ -164,9 +164,9 @@ EOF
                     
                     # Run Selenium tests with retry mechanism (optional, can be commented out)
                     echo "Running Selenium tests..."
-                    python3 -m pytest test_selenium_fixed.py -v --html=selenium_test_report.html --self-contained-html --tb=short || {
+                    pytest test_selenium_fixed.py -v --html=selenium_test_report.html --self-contained-html --tb=short || {
                         echo "⚠️ Selenium tests failed, trying original test suite..."
-                        python3 -m pytest test_liveqa.py -v --html=selenium_fallback_report.html --self-contained-html --tb=short || {
+                        pytest test_liveqa.py -v --html=selenium_fallback_report.html --self-contained-html --tb=short || {
                             echo "⚠️ Selenium tests failed - continuing pipeline"
                         }
                     }
@@ -192,7 +192,7 @@ EOF
                     
                     # Create virtual environment for report generation
                     python3 -m venv venv_reports
-                    source venv_reports/bin/activate
+                    . venv_reports/bin/activate
                     
                     pip install --upgrade pip
                     pip install -r requirements.txt
@@ -202,7 +202,7 @@ EOF
                         echo "JUnit XML file found"
                     else
                         echo "Generating JUnit XML from pytest..."
-                        python3 -m pytest test_http_simple.py --junit-xml=pytest_results.xml --tb=no -q || true
+                        pytest test_http_simple.py --junit-xml=pytest_results.xml --tb=no -q || true
                     fi
                     
                     deactivate
