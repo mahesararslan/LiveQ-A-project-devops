@@ -285,131 +285,92 @@ EOF
                 }
 
                 // Parse test results
-                def testSummary = "No test results found"
-                def testDetails = "Tests may have failed to run or no test files were found."
-                int totalTests = 0, passedTests = 0, failedTests = 0, skippedTests = 0
+                def raw = ''
+                if (fileExists('tests/pytest_results.xml')) {
+                    raw = sh(
+                        script: "grep -h '<testcase' tests/pytest_results.xml || true",
+                        returnStdout: true
+                    ).trim()
+                }
 
-                try {
-                    // Try to read pytest results
-                    if (fileExists('tests/pytest_results.xml')) {
-                        def testResults = readFile('tests/pytest_results.xml')
-                        // Basic XML parsing for test counts
-                        def testSuite = testResults =~ /<testsuite[^>]*tests="(\d+)"[^>]*failures="(\d+)"[^>]*skipped="(\d+)"/
-                        if (testSuite) {
-                            totalTests = testSuite[0][1] as Integer
-                            failedTests = testSuite[0][2] as Integer
-                            skippedTests = testSuite[0][3] as Integer
-                            passedTests = totalTests - failedTests - skippedTests
-                            
-                            testSummary = "Total: ${totalTests}, Passed: ${passedTests}, Failed: ${failedTests}, Skipped: ${skippedTests}"
-                            testDetails = "✅ HTTP Tests: 5 tests executed\\n🌐 Selenium Tests: Browser automation tests\\n📊 Health Checks: Application services verified"
+                int totalTests = 0, passedTests = 0, failedTests = 0, skippedTests = 0
+                def testDetails = ""
+
+                if (raw) {
+                    raw.split('\n').each { line ->
+                        totalTests++
+                        def m = (line =~ /name="([^"]+)"/)
+                        def name = m ? m[0][1] : "Unknown Test"
+                        if (line.contains("<failure")) {
+                            failedTests++
+                            testDetails += "❌ Failed: ${name}\n"
+                        } else if (line.contains("<skipped") || line.contains("</skipped>")) {
+                            skippedTests++
+                            testDetails += "⏭ Skipped: ${name}\n"
+                        } else {
+                            passedTests++
+                            testDetails += "✅ Passed: ${name}\n"
                         }
                     }
-                } catch (Exception e) {
-                    echo "Could not parse test results: ${e.message}"
+                } else {
+                    testDetails = "No test results found (tests may have failed to run)."
                 }
 
                 def buildStatus = currentBuild.currentResult ?: 'UNKNOWN'
-                def color = buildStatus == 'SUCCESS' ? '#28a745' : (buildStatus == 'FAILURE' ? '#dc3545' : '#ffc107')
-                def statusIcon = buildStatus == 'SUCCESS' ? '✅' : (buildStatus == 'FAILURE' ? '❌' : '⚠️')
+                def color = buildStatus == 'SUCCESS' ? '#28a745' : '#dc3545'
+                def statusIcon = buildStatus == 'SUCCESS' ? '✅' : '❌'
 
                 def emailBody = """
-                <html>
-                <head>
-                    <style>
-                        body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f8f9fa; }
-                        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
-                        .header { background: ${color}; color: white; padding: 20px; text-align: center; }
-                        .content { padding: 20px; }
-                        .status { font-size: 24px; font-weight: bold; margin: 10px 0; }
-                        .section { margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid ${color}; }
-                        .test-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 15px 0; }
-                        .test-stat { text-align: center; padding: 10px; background: white; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-                        .links { margin-top: 20px; text-align: center; }
-                        .links a { display: inline-block; margin: 0 10px; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-                        .footer { background: #6c757d; color: white; padding: 15px; text-align: center; font-size: 12px; }
-                        pre { background: #f1f3f4; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 14px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>${statusIcon} Live Q&A CI/CD Pipeline</h1>
-                            <p>Build #${env.BUILD_NUMBER}</p>
-                        </div>
-                        
-                        <div class="content">
-                            <div class="section">
-                                <h3>Build Information</h3>
-                                <p><strong>Status:</strong> <span style="color:${color}; font-weight: bold;">${buildStatus}</span></p>
-                                <p><strong>Project:</strong> Live Q&A with Real-Time Voting</p>
-                                <p><strong>Branch:</strong> main</p>
-                                <p><strong>Triggered by:</strong> ${currentBuild.getBuildCauses()[0]?.shortDescription ?: 'Unknown'}</p>
-                                <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
-                                <p><strong>Timestamp:</strong> ${new Date()}</p>
-                            </div>
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                        <h2 style="color: ${color};">${statusIcon} Live Q&A CI/CD – Build #${env.BUILD_NUMBER}</h2>
+                        <p><strong>Status:</strong> <span style="color:${color}; font-size:20px;">${buildStatus}</span></p>
+                        <p><strong>Triggered by:</strong> ${currentBuild.getBuildCauses()[0].shortDescription}</p>
+                        <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
 
-                            <div class="section">
-                                <h3>📊 Test Results Summary</h3>
-                                <div class="test-summary">
-                                    <div class="test-stat">
-                                        <div style="font-size: 20px; font-weight: bold;">${totalTests}</div>
-                                        <div>Total Tests</div>
-                                    </div>
-                                    <div class="test-stat">
-                                        <div style="font-size: 20px; font-weight: bold; color: #28a745;">${passedTests}</div>
-                                        <div>Passed</div>
-                                    </div>
-                                    <div class="test-stat">
-                                        <div style="font-size: 20px; font-weight: bold; color: #dc3545;">${failedTests}</div>
-                                        <div>Failed</div>
-                                    </div>
-                                    <div class="test-stat">
-                                        <div style="font-size: 20px; font-weight: bold; color: #ffc107;">${skippedTests}</div>
-                                        <div>Skipped</div>
-                                    </div>
-                                </div>
-                                <pre>${testDetails}</pre>
-                            </div>
+                        <h3>🧪 Test Results Summary</h3>
+                        <table style="border-collapse: collapse; margin: 10px 0;">
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid #ddd;"><strong>Total Tests</strong></td>
+                                <td style="padding: 8px; border: 1px solid #ddd;">${totalTests}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid #ddd;"><strong>Passed</strong></td>
+                                <td style="padding: 8px; border: 1px solid #ddd; color: green;">${passedTests}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid #ddd;"><strong>Failed</strong></td>
+                                <td style="padding: 8px; border: 1px solid #ddd; color: red;">${failedTests}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid #ddd;"><strong>Skipped</strong></td>
+                                <td style="padding: 8px; border: 1px solid #ddd;">${skippedTests}</td>
+                            </tr>
+                        </table>
 
-                            <div class="section">
-                                <h3>🏗️ Pipeline Stages</h3>
-                                <ul>
-                                    <li>✅ Repository Clone & Environment Setup</li>
-                                    <li>🐳 Docker Compose Application Startup</li>
-                                    <li>🧪 HTTP Connectivity Tests</li>
-                                    <li>🌐 Selenium Browser Tests</li>
-                                    <li>📊 Test Report Generation</li>
-                                    <li>🏥 Application Health Checks</li>
-                                </ul>
-                            </div>
+                        <h4>📋 Detailed Results:</h4>
+                        <pre style="background:#f4f4f4; padding:15px; border-radius:8px; font-size:14px;">${testDetails}</pre>
 
-                            <div class="links">
-                                <a href="${env.BUILD_URL}" style="background: #007bff;">📋 View Build Details</a>
-                                <a href="${env.BUILD_URL}console" style="background: #17a2b8;">📜 Console Output</a>
-                                <a href="${env.BUILD_URL}artifact/" style="background: #28a745;">📄 Test Reports</a>
-                            </div>
-                        </div>
-
-                        <div class="footer">
-                            <p>🚀 Live Q&A DevOps Pipeline | Generated by Jenkins CI/CD</p>
-                            <p>Repository: github.com/mahesararslan/LiveQ-A-project-devops</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
+                        <hr>
+                        <p>
+                            <a href="${env.BUILD_URL}" style="color:#007bff; text-decoration:none;">🔗 View Full Build</a> |
+                            <a href="${env.BUILD_URL}console" style="color:#007bff; text-decoration:none;">📜 Console Output</a> |
+                            <a href="${env.BUILD_URL}testReport/" style="color:#007bff; text-decoration:none;">📊 View Test Report</a>
+                        </p>
+                        <small style="color:#666;">Live Q&A DevOps Pipeline | github.com/mahesararslan/LiveQ-A-project-devops</small>
+                    </body>
+                    </html>
                 """
 
                 // Send email notification
                 try {
                     emailext(
                         to: committer,
-                        subject: "${statusIcon} Live Q&A CI/CD #${env.BUILD_NUMBER} - ${buildStatus} (${passedTests}/${totalTests} tests passed)",
+                        subject: "Live Q&A CI #${env.BUILD_NUMBER} – ${buildStatus} (${passedTests}/${totalTests} Passed)",
                         body: emailBody,
                         mimeType: 'text/html',
                         attachLog: true,
-                        compressLog: true,
-                        attachmentsPattern: 'tests/*test_report*.html'
+                        compressLog: true
                     )
                     echo "✅ Email notification sent to ${committer}"
                 } catch (Exception e) {
@@ -419,10 +380,10 @@ EOF
         }
 
         success {
-            echo "🎉 Pipeline completed successfully! Application is running at:"
-            echo "   Frontend: http://localhost:3001"
-            echo "   Backend:  http://localhost:3000"
-            echo "   Containers will remain running for access."
+            echo 'Pipeline completed successfully!'
+            echo 'Frontend: http://ec2-13-60-207-241.eu-north-1.compute.amazonaws.com:3001'
+            echo 'Backend: http://ec2-13-60-207-241.eu-north-1.compute.amazonaws.com:3000'
+            echo 'Containers will remain running for access.'
         }
 
         failure {
