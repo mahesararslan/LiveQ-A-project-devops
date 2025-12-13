@@ -1,4 +1,4 @@
-# 🗳️ Live Voting Q&A Chat Platform
+ # 🗳️ Live Voting Q&A Chat Platform
 
 A real-time Q&A platform with live voting to ensure the most important questions get noticed and answered during live events.
 
